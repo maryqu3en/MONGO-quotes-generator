@@ -1,7 +1,9 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+
 const express = require("express");
 const mongoose = require("mongoose");
-const path = require("path");
-const fs = require("fs");
+// const path = require("path");
+// const fs = require("fs");
 const cors = require("cors");
 const app = express();
 const PORT = 3030;
@@ -9,30 +11,34 @@ const PORT = 3030;
 const quotesDB = require("./quotes");
 const connectDB = () =>
   mongoose.connect(
-    "mongodb+srv://soubihmeriem:stayingforever@quotes-cluster.dydexmo.mongodb.net/?retryWrites=true&w=majority",
+    process.env.DB_CONNECTION_STRING,
     {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     }
   );
 
-let quotes = fs.readFileSync(path.resolve(__dirname, "data.json"), "utf-8");
-quotes = JSON.parse(quotes);
+// let quotes = fs.readFileSync(path.resolve(__dirname, "data.json"), "utf-8");
+// quotes = JSON.parse(quotes);
 
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
 // returns a list of quotes
-app.get("/api/quotes", (req, res) => {
+app.get("/api/quotes", async (req, res) => {
+  const quotes = await quotesDB.find();
+
   return res.status(200).json({
     quotes,
   });
 });
 
 // get random quote
-app.get("/api/quotes/random", (req, res) => {
-  const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+app.get("/api/quotes/random", async (req, res) => {
+  const count = await quotesDB.countDocuments();
+  const random = Math.floor(Math.random() * count);
+  const randomQuote = await quotesDB.findOne().skip(random);
 
   return res.status(200).json({
     randomQuote,
@@ -42,7 +48,7 @@ app.get("/api/quotes/random", (req, res) => {
 // return a single quote
 app.get("/api/quotes/:id", async (req, res) => {
   const { id } = req.params;
-  const quote = await quotesDB.findOne({id});
+  const quote = await quotesDB.findOne({ id });
 
   if (!quote) {
     return res.status(404).json({
@@ -51,7 +57,7 @@ app.get("/api/quotes/:id", async (req, res) => {
   }
 
   return res.status(200).json({
-    quote,
+    quote
   });
 });
 
